@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Login</title>
+    <link rel="stylesheet" href="/static/login.css">
+
+</head>
+<body>
+
+<div class="auth-wrapper">
+    <div class="auth-container">
+        <h2>Login</h2>
+        <input type="text" id="username" placeholder="Username">
+        <input type="password" id="password" placeholder="Password">
+        <button onclick="login()">Login</button>
+        <p style="margin-top:10px;text-align:center;">
+            No account? <a href="/register-page">Register</a>
+        </p>
+    </div>
+</div>
+
+<script>
+async function login() {
+    const username = document.getElementById("username").value;
+    const password = document.getElementById("password").value;
+
+    const response = await fetch("http://localhost:8000/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password })
+    });
+
+    const data = await response.json();
+
+    if (data.token) {
+    localStorage.setItem("token", data.token);
+    localStorage.setItem("user_id", data.user_id);
+    window.location.href = "/chat-page";
+}
+
+     else {
+        alert("Invalid credentials");
+    }
+}
+</script>
+
+</body>
+</html>
