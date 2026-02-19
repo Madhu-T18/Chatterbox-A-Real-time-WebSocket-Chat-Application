@@ -6,7 +6,7 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    background: linear-gradient(135deg, #8b46a3, #986799);
+    background: linear-gradient(135deg, #DCF8C6,#25D366;
 }
 
 .auth-wrapper {
