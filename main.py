@@ -161,6 +161,29 @@ async def upload_profile(file: UploadFile = File(...), token: str = Form(...)):
 
 
     return {"message": "Profile updated", "path": file_path}
+
+@app.post("/remove-profile")
+async def remove_profile(token: str):
+    user = get_user_by_token(token)
+    if not user:
+        raise HTTPException(status_code=401)
+
+    profile_path = user.get("profile_pic")
+
+    # Remove file from folder
+    if profile_path and os.path.exists(profile_path):
+        os.remove(profile_path)
+
+    conn = get_connection()
+    conn.execute(
+        "UPDATE users SET profile_pic=NULL WHERE id=?",
+        (user["id"],)
+    )
+    conn.commit()
+    conn.close()
+
+    return {"message": "Profile removed"}
+
 @app.post("/update-about")
 async def update_about(data: dict):
     user = get_user_by_token(data.get("token"))
