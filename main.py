@@ -290,13 +290,20 @@ async def websocket_endpoint(websocket: WebSocket):
             # ---------------- EDIT MESSAGE ----------------
             elif data["type"] == "edit_message":
 
-                conn = get_connection()
+                conn = sqlite3.connect("chat.db")
+                conn.row_factory = sqlite3.Row
                 cursor = conn.cursor()
 
+
                 msg = cursor.execute(
-                    "SELECT * FROM messages WHERE id=?",
-                    (data["message_id"],)
-                ).fetchone()
+                       "SELECT * FROM messages WHERE id=?",
+                        (data["message_id"],)
+                 ).fetchone()
+
+                msg = cursor.execute(
+        "SELECT * FROM messages WHERE id=?",
+        (data["message_id"],)
+    ).fetchone()
 
                 if msg and msg["sender_id"] == user_id:
 
@@ -307,18 +314,20 @@ async def websocket_endpoint(websocket: WebSocket):
                     """, (data["new_content"], data["message_id"]))
 
                     conn.commit()
-
                     edit_payload = {
-                        "type": "edit_message",
-                        "message_id": data["message_id"],
-                        "new_content": data["new_content"]
-                    }
+            "type": "edit_message",
+            "message_id": data["message_id"],
+            "new_content": data["new_content"]
+        }
 
+        # Send to receiver
                     await manager.send_private(msg["receiver_id"], edit_payload)
+
+        # Send back to sender
                     await websocket.send_json(edit_payload)
 
                 conn.close()
-
+        
             # ---------------- TYPING INDICATOR ----------------
             elif data["type"] == "typing":
 
