@@ -5,36 +5,31 @@
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-
+<div id="profileModal" style="display:none;">
+    <input type="file" id="profileFile">
+    <button onclick="uploadProfile()">Upload</button>
+</div>
 <div class="chat-container">
 
     <!-- SIDEBAR -->
     <div class="sidebar">
 
-        <div class="sidebar-header">
-            <span>ChatterBox</span>
-            <div class="menu">
-    <span onclick="toggleMenu()">⋮</span>
-    <div id="dropdownMenu" class="dropdown">
-        <p onclick="openProfile()">Profile</p>
-        <p onclick="openChangePassword()">Change Password</p>
-        <p onclick="logout()">Logout</p>
-    </div>
-</div>
-
-            <div class="menu-container">
-                <span class="menu-icon" onclick="toggleMenu()">⋮</span>
-                <div class="dropdown-menu" id="dropdownMenu">
-                    <div onclick="changePassword()">Change Password</div>
-                    <div onclick="logout()">Logout</div>
-                </div>
+    <div class="sidebar-header">
+        <h2>ChatterBox</h2>
+        <div class="menu">
+            <button onclick="toggleMenu()">⋮</button>
+            <div id="dropdownMenu" class="dropdown">
+                <button onclick="openProfile()">Profile</button>
+                <button onclick="openChangePassword()">Change Password</button>
+                <button onclick="logout()">Logout</button>
+                <button onclick="removeProfile()">Remove Profile</button>
             </div>
         </div>
-
-        <div id="userList"></div>
-
     </div>
 
+    <div id="userList"></div>
+
+</div>
 
     <!-- CHAT WINDOW -->
     <div class="chat-window">
@@ -235,7 +230,42 @@ function logout() {
     localStorage.removeItem("user_id");
     window.location.href = "/";
 }
+function openProfile() {
+    document.getElementById("profileModal").style.display = "block";
+}
 
+async function uploadProfile() {
+    const fileInput = document.getElementById("profileFile");
+    const token = localStorage.getItem("token");
+
+    const formData = new FormData();
+    formData.append("file", fileInput.files[0]);
+    formData.append("token", token);
+
+    const response = await fetch("/upload-profile", {
+        method: "POST",
+        body: formData
+    });
+
+    const data = await response.json();
+    alert(data.message);
+}
+async function removeProfile() {
+    const token = localStorage.getItem("token");
+
+    const response = await fetch("/remove-profile", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/x-www-form-urlencoded"
+        },
+        body: `token=${token}`
+    });
+
+    const data = await response.json();
+    alert(data.message);
+
+    location.reload(); // refresh UI
+}
 async function changePassword() {
     const oldPass = prompt("Enter old password:");
     const newPass = prompt("Enter new password:");
@@ -259,6 +289,7 @@ function toggleMenu() {
     const menu = document.getElementById("dropdownMenu");
     menu.style.display = menu.style.display === "block" ? "none" : "block";
 }
+
 
 function logout() {
     localStorage.removeItem("token");

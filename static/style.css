@@ -176,3 +176,51 @@ body {
     color: white;
     cursor: pointer;
 }
+.sidebar-header {
+    background: #25d366;
+    color: white;
+    padding: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.menu {
+    position: relative;
+}
+
+.menu button {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 20px;
+    cursor: pointer;
+}
+
+.dropdown {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: 35px;
+    background: white;
+    color: black;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    overflow: hidden;
+}
+
+.dropdown button {
+    display: block;
+    width: 150px;
+    padding: 10px;
+    border: none;
+    background: white;
+    text-align: left;
+    cursor: pointer;
+    color: black;   /* 🔥 THIS fixes text color */
+    font-weight: 500;
+}
+
+.dropdown button:hover {
+    background: #f0f0f0;
+}
