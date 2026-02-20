@@ -140,12 +140,21 @@ function connectWebSocket() {
 
     socket.onmessage = (event) => {
         const data = JSON.parse(event.data);
+        
 
         if (data.type === "private_message") {
             renderMessage(data);
         }
+        if (data.type === "edit_message") {
 
-        if (data.type === "typing") {
+    const msgDiv = document.getElementById("msg-" + data.message_id);
+
+    if (msgDiv) {
+        msgDiv.querySelector(".content").innerText =
+            data.new_content + " (edited)";
+    }
+}
+ if (data.type === "typing") {
             const typingDiv = document.getElementById("typingIndicator");
             typingDiv.innerText = data.sender_name + " is typing...";
             setTimeout(() => typingDiv.innerText = "", 2000);
@@ -186,6 +195,7 @@ document.getElementById("fileInput").addEventListener("change", async function()
 });
 
 function renderMessage(msg) {
+
     const container = document.getElementById("messages");
 
     const div = document.createElement("div");
@@ -194,16 +204,30 @@ function renderMessage(msg) {
         msg.sender_id === currentUserId ? "sent" : "received"
     );
 
+    // 🔥 IMPORTANT → Add ID for edit update
+    div.id = "msg-" + msg.id;
+
+    let editButton = "";
+
+    // Show edit button only for sender messages
+    if (msg.sender_id === currentUserId && !msg.file_path) {
+        editButton = `<button onclick="editMessage(${msg.id})">✏️</button>`;
+    }
+
     if (msg.file_path) {
+
         div.innerHTML = `
             <a href="/${msg.file_path}" target="_blank">📎 Download File</a>
             <div class="timestamp">
                 ${new Date(msg.timestamp).toLocaleTimeString()}
             </div>
         `;
+
     } else {
+
         div.innerHTML = `
-            <div>${msg.content}</div>
+            <div class="content">${msg.content}</div>
+            ${editButton}
             <div class="timestamp">
                 ${new Date(msg.timestamp).toLocaleTimeString()}
             </div>
@@ -213,7 +237,18 @@ function renderMessage(msg) {
     container.appendChild(div);
     container.scrollTop = container.scrollHeight;
 }
+function editMessage(messageId) {
 
+    const newContent = prompt("Edit your message:");
+
+    if (!newContent) return;
+
+    socket.send(JSON.stringify({
+        type: "edit_message",
+        message_id: messageId,
+        new_content: newContent
+    }));
+}
 function addEmoji(emoji) {
     const input = document.getElementById("messageInput");
     input.value += emoji;
