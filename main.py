@@ -6,7 +6,6 @@ from auth import create_user, login_user, get_user_by_token
 from websocket_manager import ConnectionManager
 from pydantic import BaseModel
 from fastapi.staticfiles import StaticFiles
-from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from fastapi import UploadFile, File,Form
 import sqlite3
@@ -254,12 +253,79 @@ async def websocket_endpoint(websocket: WebSocket):
         while True:
             data = await websocket.receive_json()
 
-            # ---------------- PRIVATE MESSAGE ----------------
+            # ================= PRIVATE MESSAGE =================
             if data["type"] == "private_message":
 
                 conn = get_connection()
+                conn.row_factory = sqlite3.Row
                 cursor = conn.cursor()
 
+                # ---- Check temp block ----
+                user_data = cursor.execute(
+                    "SELECT violation_count, is_temp_blocked, block_until FROM users WHERE id=?",
+                    (user_id,)
+                ).fetchone()
+
+                from datetime import datetime
+
+                if user_data["is_temp_blocked"] == 1:
+                    block_until = datetime.fromisoformat(user_data["block_until"])
+
+                    if datetime.utcnow() < block_until:
+                        await websocket.send_json({
+                            "type": "blocked",
+                            "message": "You are temporarily blocked for 10 minutes."
+                        })
+                        conn.close()
+                        continue
+                    else:
+                        # Auto unblock
+                        cursor.execute("""
+                            UPDATE users
+                            SET is_temp_blocked=0,
+                                violation_count=0
+                            WHERE id=?
+                        """, (user_id,))
+                        conn.commit()
+
+                # ---- Check abuse ----
+                from utils.moderation import contains_abuse, block_user_temporarily
+
+                if contains_abuse(data["content"]):
+
+                    # Log blocked message
+                    cursor.execute("""
+                        INSERT INTO blocked_messages (user_id, content, timestamp)
+                        VALUES (?, ?, ?)
+                    """, (user_id, data["content"], datetime.utcnow().isoformat()))
+
+                    new_count = user_data["violation_count"] + 1
+
+                    cursor.execute("""
+                        UPDATE users
+                        SET violation_count=?
+                        WHERE id=?
+                    """, (new_count, user_id))
+
+                    conn.commit()
+
+                    if new_count >= 3:
+                        block_user_temporarily(conn, user_id)
+
+                        await websocket.send_json({
+                            "type": "blocked",
+                            "message": "You are blocked for 10 minutes due to repeated violations."
+                        })
+                    else:
+                        await websocket.send_json({
+                            "type": "warning",
+                            "message": f"Warning {new_count}/3: Inappropriate language detected."
+                        })
+
+                    conn.close()
+                    continue
+
+                # ---- Save normal message ----
                 timestamp = datetime.utcnow().isoformat()
 
                 cursor.execute("""
@@ -281,29 +347,20 @@ async def websocket_endpoint(websocket: WebSocket):
                     "is_edited": 0
                 }
 
-                # Send to receiver
                 await manager.send_private(data["receiver_id"], message_payload)
-
-                # Send back to sender
                 await websocket.send_json(message_payload)
 
-            # ---------------- EDIT MESSAGE ----------------
+            # ================= EDIT MESSAGE =================
             elif data["type"] == "edit_message":
 
                 conn = sqlite3.connect("chat.db")
                 conn.row_factory = sqlite3.Row
                 cursor = conn.cursor()
 
-
                 msg = cursor.execute(
-                       "SELECT * FROM messages WHERE id=?",
-                        (data["message_id"],)
-                 ).fetchone()
-
-                msg = cursor.execute(
-        "SELECT * FROM messages WHERE id=?",
-        (data["message_id"],)
-    ).fetchone()
+                    "SELECT * FROM messages WHERE id=?",
+                    (data["message_id"],)
+                ).fetchone()
 
                 if msg and msg["sender_id"] == user_id:
 
@@ -314,28 +371,20 @@ async def websocket_endpoint(websocket: WebSocket):
                     """, (data["new_content"], data["message_id"]))
 
                     conn.commit()
+
                     edit_payload = {
-            "type": "edit_message",
-            "message_id": data["message_id"],
-            "new_content": data["new_content"]
-        }
+                        "type": "edit_message",
+                        "message_id": data["message_id"],
+                        "new_content": data["new_content"]
+                    }
 
-        # Send to receiver
                     await manager.send_private(msg["receiver_id"], edit_payload)
-
-        # Send back to sender
                     await websocket.send_json(edit_payload)
 
                 conn.close()
-        
-            # ---------------- TYPING INDICATOR ----------------
-            elif data["type"] == "typing":
-
-                await manager.send_private(data["receiver_id"], {
-                    "type": "typing",
-                    "sender_id": user_id,
-                    "sender_name": user["username"]
-                })
 
     except WebSocketDisconnect:
         manager.disconnect(user_id)
+
+        
+        
