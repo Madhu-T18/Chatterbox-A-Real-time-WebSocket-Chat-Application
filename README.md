@@ -341,26 +341,3 @@ Full-stack integration
 
 📄License
 This project is developed for academic purposes.
----
-
-# 🔥 Want It Even Stronger?
-
-You can improve further by adding:
-
-- Screenshots section  
-- Demo GIF  
-- Architecture diagram image  
-- API endpoints section  
-
-If you want, I can:
-
-- Make it more GitHub-attractive with badges  
-- Make it minimal and sharp  
-- Or make it recruiter-focused  
-
-Tell me your goal:  
-👉 College submission  
-👉 GitHub portfolio  
-👉 Resume impact  
-
-I’ll optimize it accordingly.
