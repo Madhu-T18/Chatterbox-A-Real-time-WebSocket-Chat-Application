@@ -106,7 +106,7 @@ It enables instant communication between users with message persistence, file sh
 
 ---
 
-## 🚀 Features
+## Features
 
 ### 🔐 Authentication
 - User Registration & Login
